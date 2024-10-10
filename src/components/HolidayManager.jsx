@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://api.remindme.globaltfn.tech/api/holiday';
+const API_URL = 'https://api.remindme.globaltfn.tech/api/holiday';
 
 const HolidayManager = () => {
     const [holidays, setHolidays] = useState([]);
