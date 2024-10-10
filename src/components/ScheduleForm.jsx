@@ -4,7 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "./Modal";
 
-const API_BASE_URL = "https://remindme.globaltfn.tech/api/schedule";
+const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
 
 const initialSchedule = {
   Monday: [],
