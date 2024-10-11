@@ -118,6 +118,7 @@ const ScheduleForm = () => {
           End_Time: calculateEndTime(startTime, 60, 1),
           Course_Name: "",
           Instructor: "",
+          Building:"",
           Room: "",
           Group: "All",
           Class_Duration: 60,
@@ -424,6 +425,25 @@ const ScheduleForm = () => {
                     "Instructor",
                     e.target.value
                   )
+                }
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label
+                className="block text-gray-700 font-bold mb-2"
+                htmlFor={`${currentDay}-building-${index}`}
+              >
+                Building:
+              </label>
+              <input
+                id={`${currentDay}-building-${index}`}
+                className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                type="text"
+                value={cls.Building}
+                onChange={(e) =>
+                  handleClassChange(currentDay, index, "Building", e.target.value)
                 }
                 required
               />
