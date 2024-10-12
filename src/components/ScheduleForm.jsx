@@ -216,6 +216,10 @@ const ScheduleForm = () => {
 
   const handleSubmit = useCallback(
     async (e) => {
+      if (allIDs.includes(formData.ID) && formData.selectedID !== formData.ID) {
+        toast.error("ID already exists in the database, please select another ID");
+        return;
+      }
       e.preventDefault();
       try {
         const response = await axios.post(`${API_BASE_URL}/add`, formData);
@@ -261,12 +265,6 @@ const ScheduleForm = () => {
   const handleDayChange = useCallback((day) => {
     setCurrentDay(day);
   }, []);
-
-  useEffect(() => {
-    if (allIDs.includes(formData.ID) && formData.selectedID !== formData.ID) {
-      toast.error("ID already exists in the database");
-    }
-  }, [formData.ID, allIDs]);
 
   const renderClassForm = useMemo(
     () => (cls, index) =>
@@ -549,6 +547,7 @@ const ScheduleForm = () => {
               }
               options={[...allIDs.map((id) => ({ value: id, label: id }))]}
               placeholder="Select Existing ID"
+              isClearable
             />
           </div>
 
@@ -630,7 +629,8 @@ const ScheduleForm = () => {
               </option>
               {Array.from({ length: 9 }, (_, i) => (
                 <option key={i} value={i + 1}>
-                  {i + 1}
+                  {i + 1} -{" "}
+                  {["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][i]}
                 </option>
               ))}
             </select>
@@ -656,7 +656,12 @@ const ScheduleForm = () => {
 
           <button
             onClick={handleSubmit}
-            className="bg-green-500 duration-300 hover:bg-green-700 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline mt-4"
+            className={`duration-300 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline mt-4 ${
+              allIDs.includes(formData.ID) &&
+              formData.selectedID !== formData.ID
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-500 hover:bg-green-700"
+            }`}
           >
             Add/Update Schedule
           </button>
