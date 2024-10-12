@@ -3,6 +3,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "./Modal";
+import Select from "react-select";
 
 const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
 
@@ -41,7 +42,9 @@ const ScheduleForm = () => {
   const fetchIDs = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/ids`);
-      setAllIDs(response.data.ids);
+      const allId = response.data.ids.sort();
+
+      setAllIDs(allId);
     } catch (error) {
       console.error("Error fetching IDs:", error);
       toast.error("Error fetching IDs");
@@ -118,7 +121,7 @@ const ScheduleForm = () => {
           End_Time: calculateEndTime(startTime, 60, 1),
           Course_Name: "",
           Instructor: "",
-          Building:"",
+          Building: "",
           Room: "",
           Group: "All",
           Class_Duration: 60,
@@ -215,8 +218,6 @@ const ScheduleForm = () => {
     async (e) => {
       e.preventDefault();
       try {
-
-
         const response = await axios.post(`${API_BASE_URL}/add`, formData);
         toast.success(response.data.message);
         fetchIDs();
@@ -261,237 +262,248 @@ const ScheduleForm = () => {
     setCurrentDay(day);
   }, []);
 
+  useEffect(() => {
+    if (allIDs.includes(formData.ID) && formData.selectedID !== formData.ID) {
+      toast.error("ID already exists in the database");
+    }
+  }, [formData.ID, allIDs]);
+
   const renderClassForm = useMemo(
     () => (cls, index) =>
-    (
-      <div
-        key={index}
-        className="bg-gray-100 p-6 rounded-lg mr-4 min-w-[300px]"
-      >
-        <button
-          type="button"
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mb-2 float-right"
-          onClick={() => handleRemoveClass(currentDay, index)}
+      (
+        <div
+          key={index}
+          className="bg-gray-100 p-6 rounded-lg mr-4 min-w-[300px]"
         >
-          Remove
-        </button>
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 font-bold mb-2"
-            htmlFor={`${currentDay}-start-time-${index}`}
+          <button
+            type="button"
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mb-2 float-right"
+            onClick={() => handleRemoveClass(currentDay, index)}
           >
-            Start Time:
-          </label>
-          <input
-            id={`${currentDay}-start-time-${index}`}
-            className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="time"
-            value={cls.Start_Time}
-            onChange={(e) =>
-              handleClassChange(
-                currentDay,
-                index,
-                "Start_Time",
-                e.target.value
-              )
-            }
-          />
+            Remove
+          </button>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-bold mb-2"
+              htmlFor={`${currentDay}-start-time-${index}`}
+            >
+              Start Time:
+            </label>
+            <input
+              id={`${currentDay}-start-time-${index}`}
+              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              type="time"
+              value={cls.Start_Time}
+              onChange={(e) =>
+                handleClassChange(
+                  currentDay,
+                  index,
+                  "Start_Time",
+                  e.target.value
+                )
+              }
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-bold mb-2"
+              htmlFor={`${currentDay}-class-duration-${index}`}
+            >
+              Class Duration:
+            </label>
+            <select
+              id={`${currentDay}-class-duration-${index}`}
+              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              value={cls.Class_Duration}
+              onChange={(e) =>
+                handleClassChange(
+                  currentDay,
+                  index,
+                  "Class_Duration",
+                  parseInt(e.target.value)
+                )
+              }
+            >
+              {classDurations.map((duration) => (
+                <option key={duration.value} value={duration.value}>
+                  {duration.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-bold mb-2"
+              htmlFor={`${currentDay}-class-count-${index}`}
+            >
+              Class Count:
+            </label>
+            <select
+              id={`${currentDay}-class-count-${index}`}
+              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              value={cls.Class_Count}
+              onChange={(e) =>
+                handleClassChange(
+                  currentDay,
+                  index,
+                  "Class_Count",
+                  parseInt(e.target.value)
+                )
+              }
+            >
+              {[1, 2, 3, 4].map((count) => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-bold mb-2"
+              htmlFor={`${currentDay}-class-type-${index}`}
+            >
+              Class Type:
+            </label>
+            <select
+              id={`${currentDay}-class-type-${index}`}
+              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              value={cls.Class_type}
+              onChange={(e) =>
+                handleClassChange(
+                  currentDay,
+                  index,
+                  "Class_type",
+                  e.target.value
+                )
+              }
+            >
+              <option value="Theory">Theory</option>
+              <option value="Lab">Lab</option>
+              <option value="Free">Free</option>
+            </select>
+          </div>
+
+          {cls.Class_type !== "Free" && (
+            <>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-bold mb-2"
+                  htmlFor={`${currentDay}-course-name-${index}`}
+                >
+                  Course Name:
+                </label>
+                <input
+                  id={`${currentDay}-course-name-${index}`}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  type="text"
+                  value={cls.Course_Name}
+                  onChange={(e) =>
+                    handleClassChange(
+                      currentDay,
+                      index,
+                      "Course_Name",
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-bold mb-2"
+                  htmlFor={`${currentDay}-instructor-${index}`}
+                >
+                  Instructor:
+                </label>
+                <input
+                  id={`${currentDay}-instructor-${index}`}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  type="text"
+                  value={cls.Instructor}
+                  onChange={(e) =>
+                    handleClassChange(
+                      currentDay,
+                      index,
+                      "Instructor",
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-bold mb-2"
+                  htmlFor={`${currentDay}-building-${index}`}
+                >
+                  Building:
+                </label>
+                <input
+                  id={`${currentDay}-building-${index}`}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  type="text"
+                  value={cls.Building}
+                  onChange={(e) =>
+                    handleClassChange(
+                      currentDay,
+                      index,
+                      "Building",
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-bold mb-2"
+                  htmlFor={`${currentDay}-room-${index}`}
+                >
+                  Room:
+                </label>
+                <input
+                  id={`${currentDay}-room-${index}`}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  type="text"
+                  value={cls.Room}
+                  onChange={(e) =>
+                    handleClassChange(currentDay, index, "Room", e.target.value)
+                  }
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-bold mb-2"
+              htmlFor={`${currentDay}-group-${index}`}
+            >
+              Group:
+            </label>
+            <select
+              id={`${currentDay}-group-${index}`}
+              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              value={cls.Group}
+              onChange={(e) =>
+                handleClassChange(currentDay, index, "Group", e.target.value)
+              }
+            >
+              <option value="All">All</option>
+              <option value="Group 1">Group 1</option>
+              <option value="Group 2">Group 2</option>
+            </select>
+          </div>
         </div>
-
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 font-bold mb-2"
-            htmlFor={`${currentDay}-class-duration-${index}`}
-          >
-            Class Duration:
-          </label>
-          <select
-            id={`${currentDay}-class-duration-${index}`}
-            className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={cls.Class_Duration}
-            onChange={(e) =>
-              handleClassChange(
-                currentDay,
-                index,
-                "Class_Duration",
-                parseInt(e.target.value)
-              )
-            }
-          >
-            {classDurations.map((duration) => (
-              <option key={duration.value} value={duration.value}>
-                {duration.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 font-bold mb-2"
-            htmlFor={`${currentDay}-class-count-${index}`}
-          >
-            Class Count:
-          </label>
-          <select
-            id={`${currentDay}-class-count-${index}`}
-            className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={cls.Class_Count}
-            onChange={(e) =>
-              handleClassChange(
-                currentDay,
-                index,
-                "Class_Count",
-                parseInt(e.target.value)
-              )
-            }
-          >
-            {[1, 2, 3, 4].map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 font-bold mb-2"
-            htmlFor={`${currentDay}-class-type-${index}`}
-          >
-            Class Type:
-          </label>
-          <select
-            id={`${currentDay}-class-type-${index}`}
-            className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={cls.Class_type}
-            onChange={(e) =>
-              handleClassChange(
-                currentDay,
-                index,
-                "Class_type",
-                e.target.value
-              )
-            }
-          >
-            <option value="Theory">Theory</option>
-            <option value="Lab">Lab</option>
-            <option value="Free">Free</option>
-          </select>
-        </div>
-
-        {cls.Class_type !== "Free" && (
-          <>
-            <div className="mb-4">
-              <label
-                className="block text-gray-700 font-bold mb-2"
-                htmlFor={`${currentDay}-course-name-${index}`}
-              >
-                Course Name:
-              </label>
-              <input
-                id={`${currentDay}-course-name-${index}`}
-                className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                value={cls.Course_Name}
-                onChange={(e) =>
-                  handleClassChange(
-                    currentDay,
-                    index,
-                    "Course_Name",
-                    e.target.value
-                  )
-                }
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label
-                className="block text-gray-700 font-bold mb-2"
-                htmlFor={`${currentDay}-instructor-${index}`}
-              >
-                Instructor:
-              </label>
-              <input
-                id={`${currentDay}-instructor-${index}`}
-                className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                value={cls.Instructor}
-                onChange={(e) =>
-                  handleClassChange(
-                    currentDay,
-                    index,
-                    "Instructor",
-                    e.target.value
-                  )
-                }
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label
-                className="block text-gray-700 font-bold mb-2"
-                htmlFor={`${currentDay}-building-${index}`}
-              >
-                Building:
-              </label>
-              <input
-                id={`${currentDay}-building-${index}`}
-                className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                value={cls.Building}
-                onChange={(e) =>
-                  handleClassChange(currentDay, index, "Building", e.target.value)
-                }
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label
-                className="block text-gray-700 font-bold mb-2"
-                htmlFor={`${currentDay}-room-${index}`}
-              >
-                Room:
-              </label>
-              <input
-                id={`${currentDay}-room-${index}`}
-                className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                value={cls.Room}
-                onChange={(e) =>
-                  handleClassChange(currentDay, index, "Room", e.target.value)
-                }
-                required
-              />
-            </div>
-          </>
-        )}
-
-        <div className="mb-4">
-          <label
-            className="block text-gray-700 font-bold mb-2"
-            htmlFor={`${currentDay}-group-${index}`}
-          >
-            Group:
-          </label>
-          <select
-            id={`${currentDay}-group-${index}`}
-            className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={cls.Group}
-            onChange={(e) =>
-              handleClassChange(currentDay, index, "Group", e.target.value)
-            }
-          >
-            <option value="All">All</option>
-            <option value="Group 1">Group 1</option>
-            <option value="Group 2">Group 2</option>
-          </select>
-        </div>
-      </div>
-    ),
+      ),
     [currentDay, handleRemoveClass, handleClassChange]
   );
 
@@ -520,37 +532,31 @@ const ScheduleForm = () => {
             >
               Select ID:
             </label>
-            <select
+            <Select
               id="selectedID"
-              className="shadow cursor-pointer appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={formData.selectedID}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, selectedID: e.target.value }))
+              className="w-full"
+              classNamePrefix="react-select"
+              value={
+                allIDs.find((id) => id === formData.selectedID)
+                  ? { value: formData.selectedID, label: formData.selectedID }
+                  : null
               }
-            >
-              <option className="hidden" value="">
-                Select Existing ID
-              </option>
-              {allIDs.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
+              onChange={(selectedOption) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  selectedID: selectedOption ? selectedOption.value : "",
+                }))
+              }
+              options={[...allIDs.map((id) => ({ value: id, label: id }))]}
+              placeholder="Select Existing ID"
+            />
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 font-bold mb-2" htmlFor="ID">
-              ID:
-            </label>
-            <input
-              id="ID"
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              name="ID"
-              value={formData.ID}
-              readOnly
-            />
+            <p className="text-gray-700 font-bold mb-2 block">
+              Selected ID:{" "}
+              <span className="text-gray-500 font-normal">{formData.ID}</span>
+            </p>
             <button
               onClick={handleDeleteSchedules}
               className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
@@ -662,8 +668,9 @@ const ScheduleForm = () => {
             {Object.keys(formData.schedule).map((day) => (
               <button
                 key={day}
-                className={`mr-2 px-4 py-2 rounded whitespace-nowrap ${currentDay === day ? "bg-blue-500 text-white" : "bg-gray-200"
-                  }`}
+                className={`mr-2 px-4 py-2 rounded whitespace-nowrap ${
+                  currentDay === day ? "bg-blue-500 text-white" : "bg-gray-200"
+                }`}
                 onClick={() => handleDayChange(day)}
               >
                 {day}
@@ -675,9 +682,20 @@ const ScheduleForm = () => {
               <h3 className="text-gray-700 font-bold mb-4">{currentDay}</h3>
               <button
                 type="button"
-                className="bg-blue-500 duration-300 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+                className={`duration-300 text-white font-bold py-2 px-4 rounded mt-4 ${
+                  formData.ID === ""
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-700"
+                } transform hover:scale-105 transition-transform`}
                 onClick={() => handleAddClass(currentDay)}
+                disabled={formData.ID === ""}
+                title={
+                  formData.ID === ""
+                    ? "Please select an ID first"
+                    : "Add a new class"
+                }
               >
+                <span className="mr-2">➕</span>
                 Add Class
               </button>
             </div>
