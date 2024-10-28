@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "./Modal";
 import Select from "react-select";
+import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
 
@@ -37,6 +38,28 @@ const ScheduleForm = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
   const [currentDay, setCurrentDay] = useState("Monday");
+  const [instructors, setInstructors] = useState([]);
+
+  useEffect(() => {
+    const savedInstructors = localStorage.getItem('instructors');
+    if (savedInstructors) {
+      setInstructors(JSON.parse(savedInstructors));
+    }
+  }, []);
+
+  const handleInstructorChange = useCallback((day, index, newValue) => {
+    const instructorName = newValue.value;
+    
+    // Update instructors list if it's a new value
+    if (!instructors.includes(instructorName)) {
+      const updatedInstructors = [...instructors, instructorName];
+      setInstructors(updatedInstructors);
+      localStorage.setItem('instructors', JSON.stringify(updatedInstructors));
+    }
+
+    // Update form data
+    handleClassChange(day, index, "Instructor", instructorName);
+  }, [instructors]);
 
   const fetchIDs = useCallback(async () => {
     try {
@@ -417,19 +440,16 @@ const ScheduleForm = () => {
                 >
                   Instructor:
                 </label>
-                <input
+                <CreatableSelect
                   id={`${currentDay}-instructor-${index}`}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
-                  value={cls.Instructor}
-                  onChange={(e) =>
-                    handleClassChange(
-                      currentDay,
-                      index,
-                      "Instructor",
-                      e.target.value
-                    )
-                  }
+                  className="shadow"
+                  value={{ value: cls.Instructor, label: cls.Instructor }}
+                  onChange={(newValue) => handleInstructorChange(currentDay, index, newValue)}
+                  options={instructors.map(instructor => ({
+                    value: instructor,
+                    label: instructor
+                  }))}
+                  isClearable
                   required
                 />
               </div>
@@ -501,11 +521,10 @@ const ScheduleForm = () => {
           </div>
         </div>
       ),
-    [currentDay, handleRemoveClass, handleClassChange]
+    [currentDay, handleRemoveClass, handleClassChange, handleInstructorChange, instructors]
   );
-
   return (
-    <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto">
+    <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto min-h-screen">
       <ToastContainer
         position="bottom-right"
         autoClose={5000}
@@ -520,7 +539,7 @@ const ScheduleForm = () => {
         transition:Bounce
       />
       <div className="flex flex-col md:flex-row">
-        <div className="w-full md:w-1/3 mb-6 md:mr-4">
+        <div className="w-full md:w-1/4 mb-6 md:mr-4">
           <h2 className="text-xl font-bold mb-4">Schedule ID</h2>
           <div className="mb-4">
             <label
@@ -557,7 +576,8 @@ const ScheduleForm = () => {
             </p>
             <button
               onClick={handleDeleteSchedules}
-              className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              disabled={formData.ID === ""}
+              className={`mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${formData.ID === "" ? "cursor-not-allowed" : ""}`}
             >
               Delete This
             </button>
@@ -666,7 +686,7 @@ const ScheduleForm = () => {
           </button>
         </div>
 
-        <div className="w-full md:w-2/3">
+        <div className="w-full md:w-3/4">
           <h2 className="text-xl font-bold mb-4">Class Schedule</h2>
           <div className="flex mb-4 overflow-x-auto">
             {Object.keys(formData.schedule).map((day) => (
