@@ -13,8 +13,7 @@ const initialSchedule = {
   Wednesday: [],
   Thursday: [],
   Friday: [],
-  Saturday: [],
-  Sunday: [],
+  Saturday: []
 };
 
 const classDurations = [
@@ -469,7 +468,7 @@ const ScheduleForm = () => {
                 <input
                   id={`${currentDay}-room-${index}`}
                   className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
+                  type="number"
                   value={cls.Room}
                   onChange={(e) =>
                     handleClassChange(currentDay, index, "Room", e.target.value)
