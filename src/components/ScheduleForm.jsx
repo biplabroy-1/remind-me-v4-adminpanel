@@ -4,7 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "./Modal";
 import Select from "react-select";
-import CreatableSelect from 'react-select/creatable';
+import CreatableSelect from "react-select/creatable";
 
 const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
 
@@ -14,7 +14,7 @@ const initialSchedule = {
   Wednesday: [],
   Thursday: [],
   Friday: [],
-  Saturday: []
+  Saturday: [],
 };
 
 const classDurations = [
@@ -41,25 +41,42 @@ const ScheduleForm = () => {
   const [instructors, setInstructors] = useState([]);
 
   useEffect(() => {
-    const savedInstructors = localStorage.getItem('instructors');
+    const savedInstructors = localStorage.getItem("instructors");
     if (savedInstructors) {
       setInstructors(JSON.parse(savedInstructors));
     }
   }, []);
+  useEffect(() => {
+    const unloadCallback = (event) => {
+      const e = event || window.event;
+      e.preventDefault();
+      e.returnValue = ""; // This line is necessary for some browsers to show the confirmation dialog
+      return ""; // This line is necessary for some browsers to show the confirmation dialog
+    };
 
-  const handleInstructorChange = useCallback((day, index, newValue) => {
-    const instructorName = newValue.value;
-    
-    // Update instructors list if it's a new value
-    if (!instructors.includes(instructorName)) {
-      const updatedInstructors = [...instructors, instructorName];
-      setInstructors(updatedInstructors);
-      localStorage.setItem('instructors', JSON.stringify(updatedInstructors));
-    }
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => {
+      // Cleanup function
+      window.removeEventListener("beforeunload", unloadCallback);
+    };
+  }, []);
 
-    // Update form data
-    handleClassChange(day, index, "Instructor", instructorName);
-  }, [instructors]);
+  const handleInstructorChange = useCallback(
+    (day, index, newValue) => {
+      const instructorName = newValue.value;
+
+      // Update instructors list if it's a new value
+      if (!instructors.includes(instructorName)) {
+        const updatedInstructors = [...instructors, instructorName];
+        setInstructors(updatedInstructors);
+        localStorage.setItem("instructors", JSON.stringify(updatedInstructors));
+      }
+
+      // Update form data
+      handleClassChange(day, index, "Instructor", instructorName);
+    },
+    [instructors]
+  );
 
   const fetchIDs = useCallback(async () => {
     try {
@@ -239,7 +256,9 @@ const ScheduleForm = () => {
   const handleSubmit = useCallback(
     async (e) => {
       if (allIDs.includes(formData.ID) && formData.selectedID !== formData.ID) {
-        toast.error("ID already exists in the database, please select another ID");
+        toast.error(
+          "ID already exists in the database, please select another ID"
+        );
         return;
       }
       e.preventDefault();
@@ -444,10 +463,12 @@ const ScheduleForm = () => {
                   id={`${currentDay}-instructor-${index}`}
                   className="shadow"
                   value={{ value: cls.Instructor, label: cls.Instructor }}
-                  onChange={(newValue) => handleInstructorChange(currentDay, index, newValue)}
-                  options={instructors.map(instructor => ({
+                  onChange={(newValue) =>
+                    handleInstructorChange(currentDay, index, newValue)
+                  }
+                  options={instructors.map((instructor) => ({
                     value: instructor,
-                    label: instructor
+                    label: instructor,
                   }))}
                   isClearable
                   required
@@ -521,7 +542,13 @@ const ScheduleForm = () => {
           </div>
         </div>
       ),
-    [currentDay, handleRemoveClass, handleClassChange, handleInstructorChange, instructors]
+    [
+      currentDay,
+      handleRemoveClass,
+      handleClassChange,
+      handleInstructorChange,
+      instructors,
+    ]
   );
   return (
     <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto min-h-screen">
@@ -577,7 +604,9 @@ const ScheduleForm = () => {
             <button
               onClick={handleDeleteSchedules}
               disabled={formData.ID === ""}
-              className={`mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${formData.ID === "" ? "cursor-not-allowed" : ""}`}
+              className={`mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${
+                formData.ID === "" ? "cursor-not-allowed" : ""
+              }`}
             >
               Delete This
             </button>
