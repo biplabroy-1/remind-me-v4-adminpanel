@@ -5,16 +5,6 @@ import HolidayManager from './components/HolidayManager.jsx';
 
 const App = () => {
   return (
-    React.useEffect(() => {
-  const unloadCallback = (event) => {
-    event.preventDefault();
-    event.returnValue = "";
-    return "";
-  };
-
-  window.addEventListener("beforeunload", unloadCallback);
-  return () => window.removeEventListener("beforeunload", unloadCallback);
-}, []);
     <Router>
       <div>
         <h1 className="text-5xl font-bold text-center p-4 text-blue-600">
