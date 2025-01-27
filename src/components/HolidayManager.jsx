@@ -13,6 +13,17 @@ const HolidayManager = () => {
     useEffect(() => {
         fetchHolidays();
     }, []);
+    
+  useEffect(() => {
+    const unloadCallback = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+  
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => window.removeEventListener("beforeunload", unloadCallback);
+  }, []);
 
     const fetchHolidays = async () => {
         try {
