@@ -1,7 +1,13 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
-import ScheduleForm from './components/ScheduleForm.jsx';
-import HolidayManager from './components/HolidayManager.jsx';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Link,
+  Navigate,
+} from "react-router-dom";
+import ScheduleForm from "./pages/ScheduleForm.jsx";
+import HolidayManager from "./pages/HolidayManager.jsx";
 
 const App = () => {
   return (
