@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.border-dashed {
+	border-style: dashed;
+	border-width: 2px;
+	border-spacing: 16px;
+}
+
 * {
 	transition: all 0.3s ease-in-out;
 }
@@ -125,10 +131,10 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+	* {
+		@apply border-border outline-ring/50;
 	}
-  body {
-    @apply bg-background text-foreground;
+	body {
+		@apply bg-background text-foreground;
 	}
 }

@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export default function UploadPDFModal() {
+export default function UploadPDFModal({ onUploadSuccess }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -37,6 +37,7 @@ export default function UploadPDFModal() {
 
       toast.success("Upload successful!");
       console.log("Upload successful:", response.data);
+      if (onUploadSuccess) onUploadSuccess(response.data);
     } catch (error) {
       toast.error("Error uploading file!");
       console.error("Error uploading file:", error);
@@ -49,13 +50,16 @@ export default function UploadPDFModal() {
 
   return (
     <>
-      <Button className="cursor-pointer" onClick={() => setOpen(true)}>Upload PDF</Button>
+      <Button className="cursor-pointer" onClick={() => setOpen(true)}>
+        Upload PDF
+      </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload PDF</DialogTitle>
           </DialogHeader>
           <input
+            className="p-4 border rounded-2xl border-dashed "
             type="file"
             accept="application/pdf"
             onChange={handleFileChange}

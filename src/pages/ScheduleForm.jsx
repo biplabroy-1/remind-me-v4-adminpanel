@@ -4,12 +4,11 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "../components/Modal";
 import Select from "react-select";
-import { Upload } from "lucide-react";
-import UploadPDFModal from "@/components/upload";
+import CreatableSelect from "react-select/creatable";
 import { Button } from "@/components/ui/button";
+import UploadPDFModal from "@/components/upload";
 
 const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
-const BASE_URL = "https://api.remindme.globaltfn.tech/api";
 
 const classDurations = [
   { value: 30, label: "30 minutes" },
@@ -19,14 +18,13 @@ const classDurations = [
 ];
 
 const ScheduleForm = () => {
-  const [initialSchedule, setInitialSchedule] = useState({
+  const [schedule, setSchedule] = useState({
     Monday: [],
     Tuesday: [],
     Wednesday: [],
     Thursday: [],
     Friday: [],
     Saturday: [],
-    Sunday: [],
   });
   const [formData, setFormData] = useState({
     ID: "",
@@ -35,12 +33,52 @@ const ScheduleForm = () => {
     program: "",
     section: "",
     semester: "",
-    schedule: initialSchedule,
   });
+
   const [allIDs, setAllIDs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
   const [currentDay, setCurrentDay] = useState("Monday");
+  const [instructors, setInstructors] = useState([]);
+
+  useEffect(() => {
+    const savedInstructors = localStorage.getItem("instructors");
+    if (savedInstructors) {
+      setInstructors(JSON.parse(savedInstructors));
+    }
+  }, []);
+
+  useEffect(() => {
+    const unloadCallback = (event) => {
+      const e = event || window.event;
+      e.preventDefault();
+      e.returnValue = ""; // This line is necessary for some browsers to show the confirmation dialog
+      return ""; // This line is necessary for some browsers to show the confirmation dialog
+    };
+
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => {
+      // Cleanup function
+      window.removeEventListener("beforeunload", unloadCallback);
+    };
+  }, []);
+
+  const handleInstructorChange = useCallback(
+    (day, index, newValue) => {
+      const instructorName = newValue.value;
+
+      // Update instructors list if it's a new value
+      if (!instructors.includes(instructorName)) {
+        const updatedInstructors = [...instructors, instructorName];
+        setInstructors(updatedInstructors);
+        localStorage.setItem("instructors", JSON.stringify(updatedInstructors));
+      }
+
+      // Update form data
+      handleClassChange(day, index, "Instructor", instructorName);
+    },
+    [instructors]
+  );
 
   const fetchIDs = useCallback(async () => {
     try {
@@ -53,13 +91,11 @@ const ScheduleForm = () => {
       toast.error("Error fetching IDs");
     }
   }, []);
-  console.log(formData.schedule);
 
   useEffect(() => {
     fetchIDs();
   }, [fetchIDs]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     const { program, section, semester, university } = formData;
     if (program && section && semester && university) {
@@ -86,17 +122,22 @@ const ScheduleForm = () => {
   const fetchScheduleByID = useCallback(async (id) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/find/${id}`);
-      const { semester, program, section, university, schedule } =
-        response.data;
+      const {
+        semester,
+        program,
+        section,
+        university,
+        schedule: fetchedSchedule,
+      } = response.data;
       setFormData((prev) => ({
         ...prev,
         semester,
         program,
         section,
         university,
-        schedule,
         ID: id,
       }));
+      setSchedule(fetchedSchedule);
     } catch (error) {
       console.error("Error fetching schedule:", error);
       toast.error("Error fetching schedule");
@@ -181,8 +222,12 @@ const ScheduleForm = () => {
 
   const handleClassChange = useCallback(
     (day, index, field, value) => {
-      setFormData((prev) => {
-        const updatedSchedule = { ...prev.schedule };
+      setSchedule((prev) => {
+        // Create a shallow copy of the schedule
+        const updatedSchedule = { ...prev };
+        // Only deep clone the specific day's array that's changing
+        updatedSchedule[day] = [...updatedSchedule[day]];
+        // Create a shallow copy of just the class being modified
         const updatedClass = { ...updatedSchedule[day][index], [field]: value };
 
         if (
@@ -213,7 +258,7 @@ const ScheduleForm = () => {
           };
         }
 
-        return { ...prev, schedule: updatedSchedule };
+        return updatedSchedule;
       });
     },
     [calculateEndTime]
@@ -229,7 +274,11 @@ const ScheduleForm = () => {
       }
       e.preventDefault();
       try {
-        const response = await axios.post(`${API_BASE_URL}/add`, formData);
+        const dataToSubmit = {
+          ...formData,
+          schedule: schedule,
+        };
+        const response = await axios.post(`${API_BASE_URL}/add`, dataToSubmit);
         toast.success(response.data.message);
         fetchIDs();
       } catch (error) {
@@ -237,7 +286,7 @@ const ScheduleForm = () => {
         toast.error("There was an error adding the schedule.");
       }
     },
-    [formData]
+    [formData, schedule, allIDs, fetchIDs]
   );
 
   const handleDeleteSchedules = useCallback(
@@ -252,6 +301,11 @@ const ScheduleForm = () => {
     [formData.selectedID]
   );
 
+  const uploadSuccess = useCallback((data) => {
+    console.log("Upload successful:", data);
+    setSchedule(data);
+  }, []);
+
   const handleConfirmDelete = useCallback(async () => {
     try {
       setIsModalOpen(false);
@@ -259,10 +313,28 @@ const ScheduleForm = () => {
         `${API_BASE_URL}/delete/${formData.selectedID}`
       );
       toast.success(response.data.message);
-      setIsModalOpen(false);
-      setFormData((prev) => ({ ...prev, selectedID: "" }));
+
+      // Reset form state
+      setFormData({
+        ID: "",
+        selectedID: "",
+        university: "",
+        program: "",
+        section: "",
+        semester: "",
+      });
+
+      // Reset schedule state
+      setSchedule({
+        Monday: [],
+        Tuesday: [],
+        Wednesday: [],
+        Thursday: [],
+        Friday: [],
+        Saturday: [],
+      });
+
       fetchIDs();
-      window.location.reload();
     } catch (error) {
       console.error("There was an error deleting the schedule:", error);
       toast.error("There was an error deleting the schedule.");
@@ -326,7 +398,7 @@ const ScheduleForm = () => {
                   currentDay,
                   index,
                   "Class_Duration",
-                  parseInt(e.target.value)
+                  Number.parseInt(e.target.value)
                 )
               }
             >
@@ -354,7 +426,7 @@ const ScheduleForm = () => {
                   currentDay,
                   index,
                   "Class_Count",
-                  parseInt(e.target.value)
+                  Number.parseInt(e.target.value)
                 )
               }
             >
@@ -425,19 +497,18 @@ const ScheduleForm = () => {
                 >
                   Instructor:
                 </label>
-                <input
+                <CreatableSelect
                   id={`${currentDay}-instructor-${index}`}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
-                  value={cls.Instructor}
-                  onChange={(e) =>
-                    handleClassChange(
-                      currentDay,
-                      index,
-                      "Instructor",
-                      e.target.value
-                    )
+                  className="shadow"
+                  value={{ value: cls.Instructor, label: cls.Instructor }}
+                  onChange={(newValue) =>
+                    handleInstructorChange(currentDay, index, newValue)
                   }
+                  options={instructors.map((instructor) => ({
+                    value: instructor,
+                    label: instructor,
+                  }))}
+                  isClearable
                   required
                 />
               </div>
@@ -476,7 +547,7 @@ const ScheduleForm = () => {
                 <input
                   id={`${currentDay}-room-${index}`}
                   className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
+                  type="number"
                   value={cls.Room}
                   onChange={(e) =>
                     handleClassChange(currentDay, index, "Room", e.target.value)
@@ -509,11 +580,16 @@ const ScheduleForm = () => {
           </div>
         </div>
       ),
-    [currentDay, handleRemoveClass, handleClassChange]
+    [
+      currentDay,
+      handleRemoveClass,
+      handleClassChange,
+      handleInstructorChange,
+      instructors,
+    ]
   );
-
   return (
-    <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto">
+    <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto min-h-screen">
       <ToastContainer
         position="bottom-right"
         autoClose={5000}
@@ -528,7 +604,7 @@ const ScheduleForm = () => {
         transition:Bounce
       />
       <div className="flex flex-col md:flex-row">
-        <div className="w-full md:w-1/3 mb-6 md:mr-4">
+        <div className="w-full md:w-1/4 mb-6 md:mr-4">
           <h2 className="text-xl font-bold mb-4">Schedule ID</h2>
           <div className="mb-4">
             <label
@@ -563,13 +639,15 @@ const ScheduleForm = () => {
               Selected ID:{" "}
               <span className="text-gray-500 font-normal">{formData.ID}</span>
             </p>
-            <button
-              type="button"
+            <Button
               onClick={handleDeleteSchedules}
-              className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              disabled={formData.ID === ""}
+              className={`mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${
+                formData.ID === "" ? "cursor-not-allowed" : ""
+              }`}
             >
               Delete This
-            </button>
+            </Button>
           </div>
           <Modal
             isOpen={isModalOpen}
@@ -662,8 +740,7 @@ const ScheduleForm = () => {
             />
           </div>
 
-          <button
-            type="button"
+          <Button
             onClick={handleSubmit}
             className={`duration-300 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline mt-4 ${
               allIDs.includes(formData.ID) &&
@@ -673,15 +750,14 @@ const ScheduleForm = () => {
             }`}
           >
             Add/Update Schedule
-          </button>
+          </Button>
         </div>
 
-        <div className="w-full md:w-2/3">
+        <div className="w-full md:w-3/4">
           <h2 className="text-xl font-bold mb-4">Class Schedule</h2>
           <div className="flex mb-4 overflow-x-auto">
-            {Object.keys(formData.schedule).map((day) => (
-              <button
-                type="button"
+            {Object.keys(schedule).map((day) => (
+              <Button
                 key={day}
                 className={`mr-2 px-4 py-2 rounded whitespace-nowrap ${
                   currentDay === day ? "bg-blue-500 text-white" : "bg-gray-200"
@@ -689,14 +765,14 @@ const ScheduleForm = () => {
                 onClick={() => handleDayChange(day)}
               >
                 {day}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-gray-700 font-bold">{currentDay}</h3>
               <div className="flex gap-4 items-center justify-center">
-                <UploadPDFModal />
+                <UploadPDFModal onUploadSuccess={uploadSuccess} />
                 <Button
                   type="button"
                   className={`duration-300 text-white font-bold py-2 px-4 cursor-pointer rounded ${
@@ -716,7 +792,7 @@ const ScheduleForm = () => {
             </div>
 
             <div className="flex overflow-x-auto pb-4">
-              {formData.schedule[currentDay].map((cls, index) =>
+              {schedule[currentDay].map((cls, index) =>
                 renderClassForm(cls, index)
               )}
             </div>
