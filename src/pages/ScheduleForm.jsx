@@ -42,11 +42,32 @@ const ScheduleForm = () => {
   const [instructors, setInstructors] = useState([]);
 
   useEffect(() => {
-    const savedInstructors = localStorage.getItem("instructors");
-    if (savedInstructors) {
-      setInstructors(JSON.parse(savedInstructors));
-    }
-  }, []);
+    const fetchInstructors = async () => {
+      const { university, program } = formData;
+
+      if (!university && !program) return;
+
+      try {
+        const params = new URLSearchParams();
+        if (university) params.append("university", university);
+        if (program) params.append("program", program);
+
+        const response = await axios.get(
+          `${API_BASE_URL}/teachers?${params.toString()}`
+        );
+
+        if (response.data && Array.isArray(response.data)) {
+          // Store the full instructor objects to use their details
+          setInstructors(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching instructors:", error);
+        toast.error("Error fetching instructors");
+      }
+    };
+
+    fetchInstructors();
+  }, [formData.university, formData.program]);
 
   useEffect(() => {
     const unloadCallback = (event) => {
@@ -63,22 +84,10 @@ const ScheduleForm = () => {
     };
   }, []);
 
-  const handleInstructorChange = useCallback(
-    (day, index, newValue) => {
-      const instructorName = newValue.value;
-
-      // Update instructors list if it's a new value
-      if (!instructors.includes(instructorName)) {
-        const updatedInstructors = [...instructors, instructorName];
-        setInstructors(updatedInstructors);
-        localStorage.setItem("instructors", JSON.stringify(updatedInstructors));
-      }
-
-      // Update form data
-      handleClassChange(day, index, "Instructor", instructorName);
-    },
-    [instructors]
-  );
+  const handleInstructorChange = useCallback((day, index, newValue) => {
+    const instructorName = newValue.value;
+    handleClassChange(day, index, "Instructor", instructorName);
+  }, []);
 
   const fetchIDs = useCallback(async () => {
     try {
@@ -157,8 +166,8 @@ const ScheduleForm = () => {
 
   const handleAddClass = useCallback(
     (day) => {
-      setFormData((prev) => {
-        const existingClasses = prev.schedule[day];
+      setSchedule((prev) => {
+        const existingClasses = prev[day];
         const lastClass = existingClasses[existingClasses.length - 1];
         const startTime = lastClass ? lastClass.End_Time : "08:00";
         const newClass = {
@@ -176,14 +185,11 @@ const ScheduleForm = () => {
         };
         return {
           ...prev,
-          schedule: {
-            ...prev.schedule,
-            [day]: [...prev.schedule[day], newClass],
-          },
+          [day]: [...prev[day], newClass],
         };
       });
     },
-    [calculateEndTime]
+    [calculateEndTime, schedule]
   );
 
   const handleRemoveClass = useCallback((day, index) => {
@@ -194,22 +200,21 @@ const ScheduleForm = () => {
   const confirmRemoveClass = useCallback(() => {
     if (classToDelete) {
       const { day, index } = classToDelete;
-      setFormData((prev) => {
-        const updatedClasses = prev.schedule[day].filter(
-          (_, idx) => idx !== index
-        );
+
+      // Update schedule state instead of formData
+      setSchedule((prev) => {
+        const updatedClasses = prev[day].filter((_, idx) => idx !== index);
         const recalculatedClasses = updatedClasses.map((cls, idx) => ({
           ...cls,
           Period: idx + 1,
         }));
+
         return {
           ...prev,
-          schedule: {
-            ...prev.schedule,
-            [day]: recalculatedClasses,
-          },
+          [day]: recalculatedClasses,
         };
       });
+
       setIsModalOpen(false);
       setClassToDelete(null);
     }
@@ -303,7 +308,7 @@ const ScheduleForm = () => {
 
   const uploadSuccess = useCallback((data) => {
     console.log("Upload successful:", data);
-    setSchedule(data);
+    setSchedule(data.schedule);
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
@@ -505,9 +510,10 @@ const ScheduleForm = () => {
                     handleInstructorChange(currentDay, index, newValue)
                   }
                   options={instructors.map((instructor) => ({
-                    value: instructor,
-                    label: instructor,
+                    value: instructor.name,
+                    label: `${instructor.name}`,
                   }))}
+                  formatCreateLabel={(inputValue) => `Add "${inputValue}"`}
                   isClearable
                   required
                 />
@@ -589,7 +595,7 @@ const ScheduleForm = () => {
     ]
   );
   return (
-    <div className="bg-white shadow-lg rounded-lg p-8 mb-4 w-full max-w-full mx-auto min-h-screen">
+    <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-full min-h-screen">
       <ToastContainer
         position="bottom-right"
         autoClose={5000}
