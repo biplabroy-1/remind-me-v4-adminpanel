@@ -3,19 +3,12 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "../components/Modal";
-import Select from "react-select";
-import CreatableSelect from "react-select/creatable";
-import { Button } from "@/components/ui/button";
-import UploadPDFModal from "@/components/upload";
+import { Card } from "@/components/ui/card";
+import ScheduleFormHeader from "@/components/sideBarForm";
+import DaySelector from "@/components/DaySelector";
+import DayClassesContainer from "@/components/DayClassesContainer";
 
 const API_BASE_URL = "https://api.remindme.globaltfn.tech/api/schedule";
-
-const classDurations = [
-  { value: 30, label: "30 minutes" },
-  { value: 40, label: "40 minutes" },
-  { value: 45, label: "45 minutes" },
-  { value: 60, label: "1 hour" },
-];
 
 const ScheduleForm = () => {
   const [schedule, setSchedule] = useState({
@@ -57,7 +50,6 @@ const ScheduleForm = () => {
         );
 
         if (response.data && Array.isArray(response.data)) {
-          // Store the full instructor objects to use their details
           setInstructors(response.data);
         }
       } catch (error) {
@@ -73,13 +65,12 @@ const ScheduleForm = () => {
     const unloadCallback = (event) => {
       const e = event || window.event;
       e.preventDefault();
-      e.returnValue = ""; // This line is necessary for some browsers to show the confirmation dialog
-      return ""; // This line is necessary for some browsers to show the confirmation dialog
+      e.returnValue = "";
+      return "";
     };
 
     window.addEventListener("beforeunload", unloadCallback);
     return () => {
-      // Cleanup function
       window.removeEventListener("beforeunload", unloadCallback);
     };
   }, []);
@@ -201,7 +192,6 @@ const ScheduleForm = () => {
     if (classToDelete) {
       const { day, index } = classToDelete;
 
-      // Update schedule state instead of formData
       setSchedule((prev) => {
         const updatedClasses = prev[day].filter((_, idx) => idx !== index);
         const recalculatedClasses = updatedClasses.map((cls, idx) => ({
@@ -222,17 +212,14 @@ const ScheduleForm = () => {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value.toUpperCase() }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleClassChange = useCallback(
     (day, index, field, value) => {
       setSchedule((prev) => {
-        // Create a shallow copy of the schedule
         const updatedSchedule = { ...prev };
-        // Only deep clone the specific day's array that's changing
         updatedSchedule[day] = [...updatedSchedule[day]];
-        // Create a shallow copy of just the class being modified
         const updatedClass = { ...updatedSchedule[day][index], [field]: value };
 
         if (
@@ -249,7 +236,6 @@ const ScheduleForm = () => {
 
         updatedSchedule[day][index] = updatedClass;
 
-        // Update subsequent classes' start times
         for (let i = index + 1; i < updatedSchedule[day].length; i++) {
           const prevClass = updatedSchedule[day][i - 1];
           updatedSchedule[day][i] = {
@@ -319,7 +305,6 @@ const ScheduleForm = () => {
       );
       toast.success(response.data.message);
 
-      // Reset form state
       setFormData({
         ID: "",
         selectedID: "",
@@ -329,7 +314,6 @@ const ScheduleForm = () => {
         semester: "",
       });
 
-      // Reset schedule state
       setSchedule({
         Monday: [],
         Tuesday: [],
@@ -350,252 +334,8 @@ const ScheduleForm = () => {
     setCurrentDay(day);
   }, []);
 
-  const renderClassForm = useMemo(
-    () => (cls, index) =>
-      (
-        <div
-          key={index}
-          className="bg-gray-100 p-6 rounded-lg mr-4 min-w-[300px]"
-        >
-          <button
-            type="button"
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mb-2 float-right"
-            onClick={() => handleRemoveClass(currentDay, index)}
-          >
-            Remove
-          </button>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor={`${currentDay}-start-time-${index}`}
-            >
-              Start Time:
-            </label>
-            <input
-              id={`${currentDay}-start-time-${index}`}
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="time"
-              value={cls.Start_Time}
-              onChange={(e) =>
-                handleClassChange(
-                  currentDay,
-                  index,
-                  "Start_Time",
-                  e.target.value
-                )
-              }
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor={`${currentDay}-class-duration-${index}`}
-            >
-              Class Duration:
-            </label>
-            <select
-              id={`${currentDay}-class-duration-${index}`}
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={cls.Class_Duration}
-              onChange={(e) =>
-                handleClassChange(
-                  currentDay,
-                  index,
-                  "Class_Duration",
-                  Number.parseInt(e.target.value)
-                )
-              }
-            >
-              {classDurations.map((duration) => (
-                <option key={duration.value} value={duration.value}>
-                  {duration.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor={`${currentDay}-class-count-${index}`}
-            >
-              Class Count:
-            </label>
-            <select
-              id={`${currentDay}-class-count-${index}`}
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={cls.Class_Count}
-              onChange={(e) =>
-                handleClassChange(
-                  currentDay,
-                  index,
-                  "Class_Count",
-                  Number.parseInt(e.target.value)
-                )
-              }
-            >
-              {[1, 2, 3, 4].map((count) => (
-                <option key={count} value={count}>
-                  {count}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor={`${currentDay}-class-type-${index}`}
-            >
-              Class Type:
-            </label>
-            <select
-              id={`${currentDay}-class-type-${index}`}
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={cls.Class_type}
-              onChange={(e) =>
-                handleClassChange(
-                  currentDay,
-                  index,
-                  "Class_type",
-                  e.target.value
-                )
-              }
-            >
-              <option value="Theory">Theory</option>
-              <option value="Lab">Lab</option>
-              <option value="Free">Free</option>
-            </select>
-          </div>
-
-          {cls.Class_type !== "Free" && (
-            <>
-              <div className="mb-4">
-                <label
-                  className="block text-gray-700 font-bold mb-2"
-                  htmlFor={`${currentDay}-course-name-${index}`}
-                >
-                  Course Name:
-                </label>
-                <input
-                  id={`${currentDay}-course-name-${index}`}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
-                  value={cls.Course_Name}
-                  onChange={(e) =>
-                    handleClassChange(
-                      currentDay,
-                      index,
-                      "Course_Name",
-                      e.target.value
-                    )
-                  }
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label
-                  className="block text-gray-700 font-bold mb-2"
-                  htmlFor={`${currentDay}-instructor-${index}`}
-                >
-                  Instructor:
-                </label>
-                <CreatableSelect
-                  id={`${currentDay}-instructor-${index}`}
-                  className="shadow"
-                  value={{ value: cls.Instructor, label: cls.Instructor }}
-                  onChange={(newValue) =>
-                    handleInstructorChange(currentDay, index, newValue)
-                  }
-                  options={instructors.map((instructor) => ({
-                    value: instructor.name,
-                    label: `${instructor.name}`,
-                  }))}
-                  formatCreateLabel={(inputValue) => `Add "${inputValue}"`}
-                  isClearable
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label
-                  className="block text-gray-700 font-bold mb-2"
-                  htmlFor={`${currentDay}-building-${index}`}
-                >
-                  Building:
-                </label>
-                <input
-                  id={`${currentDay}-building-${index}`}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="text"
-                  value={cls.Building}
-                  onChange={(e) =>
-                    handleClassChange(
-                      currentDay,
-                      index,
-                      "Building",
-                      e.target.value
-                    )
-                  }
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label
-                  className="block text-gray-700 font-bold mb-2"
-                  htmlFor={`${currentDay}-room-${index}`}
-                >
-                  Room:
-                </label>
-                <input
-                  id={`${currentDay}-room-${index}`}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  type="number"
-                  value={cls.Room}
-                  onChange={(e) =>
-                    handleClassChange(currentDay, index, "Room", e.target.value)
-                  }
-                  required
-                />
-              </div>
-            </>
-          )}
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor={`${currentDay}-group-${index}`}
-            >
-              Group:
-            </label>
-            <select
-              id={`${currentDay}-group-${index}`}
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={cls.Group}
-              onChange={(e) =>
-                handleClassChange(currentDay, index, "Group", e.target.value)
-              }
-            >
-              <option value="All">All</option>
-              <option value="Group 1">Group 1</option>
-              <option value="Group 2">Group 2</option>
-            </select>
-          </div>
-        </div>
-      ),
-    [
-      currentDay,
-      handleRemoveClass,
-      handleClassChange,
-      handleInstructorChange,
-      instructors,
-    ]
-  );
   return (
-    <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-full min-h-screen">
+    <Card className="p-8 w-full max-w-full min-h-screen">
       <ToastContainer
         position="bottom-right"
         autoClose={5000}
@@ -607,205 +347,50 @@ const ScheduleForm = () => {
         draggable
         pauseOnHover
         theme="light"
-        transition:Bounce
       />
       <div className="flex flex-col md:flex-row">
-        <div className="w-full md:w-1/4 mb-6 md:mr-4">
-          <h2 className="text-xl font-bold mb-4">Schedule ID</h2>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor="selectedID"
-            >
-              Select ID:
-            </label>
-            <Select
-              id="selectedID"
-              className="w-full"
-              classNamePrefix="react-select"
-              value={
-                allIDs.find((id) => id === formData.selectedID)
-                  ? { value: formData.selectedID, label: formData.selectedID }
-                  : null
-              }
-              onChange={(selectedOption) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  selectedID: selectedOption ? selectedOption.value : "",
-                }))
-              }
-              options={[...allIDs.map((id) => ({ value: id, label: id }))]}
-              placeholder="Select Existing ID"
-              isClearable
-            />
-          </div>
-
-          <div className="mb-4">
-            <p className="text-gray-700 font-bold mb-2 block">
-              Selected ID:{" "}
-              <span className="text-gray-500 font-normal">{formData.ID}</span>
-            </p>
-            <Button
-              onClick={handleDeleteSchedules}
-              disabled={formData.ID === ""}
-              className={`mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${
-                formData.ID === "" ? "cursor-not-allowed" : ""
-              }`}
-            >
-              Delete This
-            </Button>
-          </div>
-          <Modal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onConfirm={classToDelete ? confirmRemoveClass : handleConfirmDelete}
-            message={
-              classToDelete
-                ? "Are you sure you want to delete this class?"
-                : "Are you sure you want to delete this schedule?"
-            }
-          />
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor="university"
-            >
-              University:
-            </label>
-            <input
-              id="university"
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              name="university"
-              value={formData.university}
-              onChange={handleInputChange}
-              placeholder="Enter university (e.g., BWU)"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor="program"
-            >
-              Program:
-            </label>
-            <input
-              id="program"
-              className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              name="program"
-              value={formData.program}
-              onChange={handleInputChange}
-              placeholder="Enter Program (e.g., BCA)"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor="semester"
-            >
-              Semester:
-            </label>
-            <select
-              id="semester"
-              className="shadow cursor-pointer appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              name="semester"
-              value={formData.semester}
-              onChange={handleInputChange}
-            >
-              <option className="hidden" value="">
-                Select Semester
-              </option>
-              {Array.from({ length: 9 }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  {i + 1} -{" "}
-                  {["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][i]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-bold mb-2"
-              htmlFor="section"
-            >
-              Section:
-            </label>
-            <input
-              id="section"
-              className="shadow uppercase appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              name="section"
-              value={formData.section}
-              onChange={handleInputChange}
-              placeholder="Enter Section (e.g., A)"
-            />
-          </div>
-
-          <Button
-            onClick={handleSubmit}
-            className={`duration-300 text-white font-bold py-3 px-6 rounded focus:outline-none focus:shadow-outline mt-4 ${
-              allIDs.includes(formData.ID) &&
-              formData.selectedID !== formData.ID
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-green-500 hover:bg-green-700"
-            }`}
-          >
-            Add/Update Schedule
-          </Button>
-        </div>
+        <ScheduleFormHeader
+          formData={formData}
+          setFormData={setFormData}
+          allIDs={allIDs}
+          handleInputChange={handleInputChange}
+          handleDeleteSchedules={handleDeleteSchedules}
+          handleSubmit={handleSubmit}
+        />
 
         <div className="w-full md:w-3/4">
           <h2 className="text-xl font-bold mb-4">Class Schedule</h2>
-          <div className="flex mb-4 overflow-x-auto">
-            {Object.keys(schedule).map((day) => (
-              <Button
-                key={day}
-                className={`mr-2 px-4 py-2 rounded whitespace-nowrap ${
-                  currentDay === day ? "bg-blue-500 text-white" : "bg-gray-200"
-                }`}
-                onClick={() => handleDayChange(day)}
-              >
-                {day}
-              </Button>
-            ))}
-          </div>
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-gray-700 font-bold">{currentDay}</h3>
-              <div className="flex gap-4 items-center justify-center">
-                <UploadPDFModal onUploadSuccess={uploadSuccess} />
-                <Button
-                  type="button"
-                  className={`duration-300 text-white font-bold py-2 px-4 cursor-pointer rounded ${
-                    formData.ID === ""
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-500 hover:bg-blue-700"
-                  } transform hover:scale-105 transition-transform`}
-                  onClick={() => handleAddClass(currentDay)}
-                  disabled={formData.ID === ""}
-                >
-                  <span className="mr-2">➕</span>
-                  {formData.ID === ""
-                    ? "Please select an ID first"
-                    : "Add a new class"}
-                </Button>
-              </div>
-            </div>
+          <DaySelector
+            schedule={schedule}
+            currentDay={currentDay}
+            handleDayChange={handleDayChange}
+          />
 
-            <div className="flex overflow-x-auto pb-4">
-              {schedule[currentDay].map((cls, index) =>
-                renderClassForm(cls, index)
-              )}
-            </div>
-          </div>
+          <DayClassesContainer
+            currentDay={currentDay}
+            schedule={schedule}
+            handleAddClass={handleAddClass}
+            formData={formData}
+            onUploadSuccess={uploadSuccess}
+            handleRemoveClass={handleRemoveClass}
+            handleClassChange={handleClassChange}
+            handleInstructorChange={handleInstructorChange}
+            instructors={instructors}
+          />
         </div>
       </div>
-    </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={classToDelete ? confirmRemoveClass : handleConfirmDelete}
+        message={
+          classToDelete
+            ? "Are you sure you want to delete this class?"
+            : "Are you sure you want to delete this schedule?"
+        }
+      />
+    </Card>
   );
 };
 
