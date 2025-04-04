@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import ClassForm from "./ClassForm";
+import ClassForm from "@/components/classForm";
 import UploadPDFModal from "@/components/upload";
 
 const DayClassesContainer = ({
