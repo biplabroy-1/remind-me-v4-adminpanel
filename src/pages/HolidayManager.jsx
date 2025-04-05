@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
 const API_URL = "https://api.remindme.globaltfn.tech/api/holiday";
 
@@ -8,7 +9,6 @@ const HolidayManager = () => {
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [dayCount, setDayCount] = useState(1);
-  const [notification, setNotification] = useState("");
 
   useEffect(() => {
     fetchHolidays();
@@ -37,7 +37,7 @@ const HolidayManager = () => {
       console.log(combinedHolidays);
     } catch (error) {
       console.error("Error fetching holidays:", error);
-      setNotification("Error fetching holidays. Please try again.");
+      toast.error("Error fetching holidays. Please try again.");
     }
   };
 
@@ -82,7 +82,7 @@ const HolidayManager = () => {
 
   const handleAddHolidays = async () => {
     if (!name || !startDate) {
-      setNotification("Please enter a holiday name and start date.");
+      toast.error("Please enter a holiday name and start date.");
       return;
     }
 
@@ -100,44 +100,44 @@ const HolidayManager = () => {
         holidaysToAdd.map((holiday) => axios.post(`${API_URL}/add`, holiday))
       );
 
-      setNotification("Holidays added successfully.");
+      toast.success("Holidays added successfully.");
       fetchHolidays();
       setName("");
       setStartDate("");
       setDayCount(1);
     } catch (error) {
       console.error("Error adding holidays:", error);
-      setNotification("Failed to add holidays.");
+      toast.error("Failed to add holidays.");
     }
   };
 
   const handleDeleteHoliday = async (id) => {
     if (!id) {
       console.error("No ID provided for deletion.");
-      setNotification("No holiday ID specified for deletion.");
+      toast.error("No holiday ID specified for deletion.");
       return;
     }
 
     if (window.confirm("Are you sure you want to delete this holiday?")) {
       try {
         const response = await axios.delete(`${API_URL}/delete/${id}`);
-        setNotification(response.data.message);
+        toast.success(response.data.message);
         fetchHolidays();
       } catch (error) {
         console.error("Error deleting holiday:", error);
-        setNotification("Failed to delete holiday: " + error.message);
+        toast.error("Failed to delete holiday: " + error.message);
       }
     }
   };
 
   return (
     <div className="p-6 bg-gray-50 rounded-lg shadow-lg">
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+      />
       <h2 className="text-4xl font-semibold mb-4">Holiday Manager</h2>
-      {notification && (
-        <div className="bg-blue-100 text-blue-700 p-3 rounded-lg mb-4">
-          {notification}
-        </div>
-      )}
       <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <input
           type="text"

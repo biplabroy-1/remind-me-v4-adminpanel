@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import toast, { Toaster } from "react-hot-toast";
 import Modal from "../components/Modal";
 import { Card } from "@/components/ui/card";
 import ScheduleFormHeader from "@/components/sideBarForm";
@@ -49,12 +48,34 @@ const ScheduleForm = () => {
           `${API_BASE_URL}/teachers?${params.toString()}`
         );
 
-        if (response.data && Array.isArray(response.data)) {
+        // Axios already parses the JSON response, so we don't need to call response.json()
+        // response.data contains the parsed JSON data
+        if (Array.isArray(response.data)) {
           setInstructors(response.data);
+        } else {
+          // If the response is not an array, it might be an error object
+          console.log("Unexpected response format:", response.data);
+          toast.error(response.data.message || "Failed to fetch instructors");
         }
       } catch (error) {
         console.error("Error fetching instructors:", error);
-        toast.error("Error fetching instructors");
+
+        // Handle different error scenarios
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          if (error.response.status === 404) {
+            toast.error("No instructors found for the selected criteria");
+          } else {
+            toast.error(error.response.data.message || "Error fetching instructors");
+          }
+        } else if (error.request) {
+          // The request was made but no response was received
+          toast.error("No response from server. Please check your connection.");
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          toast.error("Error setting up request: " + error.message);
+        }
       }
     };
 
@@ -284,7 +305,7 @@ const ScheduleForm = () => {
     (e) => {
       e.preventDefault();
       if (!formData.selectedID) {
-        toast.warn("Nothing is selected");
+        toast.error("Nothing is selected");
         return;
       }
       setIsModalOpen(true);
@@ -293,6 +314,7 @@ const ScheduleForm = () => {
   );
 
   const uploadSuccess = useCallback((data) => {
+    if (data === null) return;
     console.log("Upload successful:", data);
     setSchedule(data.schedule);
   }, []);
@@ -336,17 +358,10 @@ const ScheduleForm = () => {
 
   return (
     <Card className="p-8 w-full max-w-full min-h-screen">
-      <ToastContainer
-        position="bottom-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
       />
       <div className="flex flex-col md:flex-row">
         <ScheduleFormHeader

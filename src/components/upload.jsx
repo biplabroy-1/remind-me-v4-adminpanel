@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import toast from "react-hot-toast";
 
 export default function UploadPDFModal({ onUploadSuccess }) {
   const [open, setOpen] = useState(false);
@@ -17,15 +16,6 @@ export default function UploadPDFModal({ onUploadSuccess }) {
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
   const eventSourceRef = useRef(null);
-
-  // Clean up the event source when the component unmounts
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
 
   const handleFileChange = (event) => {
     const uploadedFile = event.target.files[0];
@@ -43,55 +33,42 @@ export default function UploadPDFModal({ onUploadSuccess }) {
     formData.append("pdf", file);
 
     try {
-      // Close any existing connection
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
 
-      // Start the upload process
-      const uploadPromise = fetch("http://localhost:5000/api/extract-pdf", {
+      const response = await fetch("https://api.remindme.globaltfn.tech/api/extract-pdf", {
         method: "POST",
         body: formData,
       });
-
-      // Get the response to check if the initial request was successful
-      const response = await uploadPromise;
 
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      // Set up event source for progress updates from the same response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Process the stream
-      const processStream = async () => {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
 
-          // Process any complete messages
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || ""; // Keep the last incomplete chunk
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.substring(6));
-                handleEventData(data);
-              } catch (e) {
-                console.error("Error parsing SSE data:", e);
-              }
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.substring(6));
+              handleEventData(data);
+            } catch (e) {
+              console.error("Error parsing SSE data:", e);
             }
           }
         }
-      };
-
-      processStream();
+      }
     } catch (error) {
       toast.error("Error uploading file!");
       console.error("Error uploading file:", error);
@@ -102,51 +79,83 @@ export default function UploadPDFModal({ onUploadSuccess }) {
   const handleEventData = (data) => {
     console.log("Received update:", data);
 
-    // Update status message
     if (data.message) {
       setStatusMessage(data.message);
+      console.log(data.message);
+      
+      let newProgress = progress;
+      switch (data.status) {
+        case "uploading":
+          newProgress = data.progress;
+          break;
+        case "uploaded":
+          newProgress = data.progress;
+          break;
+        case "processing":
+          newProgress = data.progress;
+          break;
+        case "processed":
+          newProgress = data.progress;
+          break;
+        case "analyzing":
+          newProgress = data.progress;
+          break;
+        case "extracting":
+          newProgress = data.progress;
+          break;
+        case "finalizing":
+          newProgress = data.progress;
+          break;
+        case "extracted":
+          newProgress = data.progress;
+          break;
+        case "complete":
+          newProgress = 100;
+          if (data.status === "complete"){
+            toast.success(data.message);
+          }else{
+            toast.error(data.message.substring(0, 30)); 
+          }
+          break;
+        default:
+          break;
+      }
+
+      setProgress(newProgress);
     }
 
-    // Update progress based on status
-    switch (data.status) {
-      case "uploading":
-        setProgress(20);
-        break;
-      case "uploaded":
-        setProgress(30);
-        break;
-      case "processing":
-        setProgress(50);
-        break;
-      case "processed":
-        setProgress(60);
-        break;
-      case "analyzing":
-        setProgress(70);
-        break;
-      case "extracting":
-        setProgress(80);
-        break;
-      case "complete":
-        setProgress(100);
-        toast.success("PDF processed successfully!");
-        if (onUploadSuccess && data.data) {
-          onUploadSuccess(data.data);
-        }
-        setTimeout(() => {
-          setUploading(false);
-          setOpen(false);
-          setFile(null);
-          setProgress(0);
-          setStatusMessage("");
-        }, 1000);
-        break;
-      case "error":
-        toast.error(data.message || "Error processing PDF");
+    if (data.status === "complete") {
+      console.log("This is the data", data);
+      
+      // Check if the data contains a non-timetable message
+      if (data.type === "text" && typeof data.data === 'string') {
+        console.log("Received non-timetable data");
+        toast.error("Please upload a valid academic timetable");
         setUploading(false);
-        break;
-      default:
-        break;
+        setOpen(false);
+        setFile(null);
+        setProgress(0);
+        setStatusMessage("");
+        return; // Exit early without calling onUploadSuccess
+      }
+
+      if (data.data.status === "error" || data.data.type === "text") {
+        console.log("error");
+        toast.error(data.data.message);
+        setUploading(false);
+      } else if (onUploadSuccess && data.data) {
+        onUploadSuccess(data.data);
+      }
+      
+      setTimeout(() => {
+        setUploading(false);
+        setOpen(false);
+        setFile(null);
+        setProgress(0);
+        setStatusMessage("");
+      }, 1000);
+    } else if (data.status === "error") {
+      setUploading(false);
     }
   };
 
@@ -180,9 +189,17 @@ export default function UploadPDFModal({ onUploadSuccess }) {
               </p>
             </div>
           )}
-          <Button onClick={handleUpload} disabled={!file || uploading}>
-            {uploading ? "Processing..." : "Upload"}
-          </Button>
+          <div className="flex justify-end mt-4">
+            {!uploading && (
+              <Button
+                onClick={handleUpload}
+                disabled={!file}
+                className="ml-2"
+              >
+                Upload
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
